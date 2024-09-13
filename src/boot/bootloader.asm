@@ -131,8 +131,6 @@ entry:
     ; -----------------------------------------------------------------
     ; TODO: should we do this???
 
-    jmp $
-
     ; Done with real mode, jump to pMode
     jmp enable_pMode
 
@@ -214,6 +212,17 @@ load_kernel:
 ; No more instructions past here...
 ; ---------------------------------
 
+; Reads data from ATA disk into memroy
+; *** Only works with MASTER drive on primary ATA Bus
+; *** Utilizes 28-bit PIO
+; *** Also assumes standard port addresses for ATA
+; ***   I/O ports:      0x1F0 - 0x1f7
+; ***   Control ports:  0x3F6 - 0x3F7
+; ***   Maybe enumerate PCI to verify this???
+;
+;   eax -> Read start sector
+;   ecx -> Number of sectors to read
+;   edi -> Address in memory to write sectors to
 ata_lba_read:
     jmp $
 

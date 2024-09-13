@@ -37,9 +37,9 @@ GCC_FLAGS = -ffreestanding -O0 -nostdlib
 # ##################################################################################
 all: prereqs | ${BOOTLOADER_BIN} ${KERNEL_FINAL_BIN}
 	# Create a bootable floppy of our OS
-	dd if=/dev/zero    		 of=${OS_BIN} bs=512 count=2880
-	dd if=${BOOTLOADER_BIN}  of=${OS_BIN} bs=512 seek=0 count=1 conv=notrunc,sync
-	dd if=${KERNEL_FINAL_BIN} of=${OS_BIN} bs=512 seek=1 count=1 conv=notrunc,sync
+	dd if=/dev/zero    		  of=${OS_BIN} bs=512 count=2880
+	dd if=${BOOTLOADER_BIN}   of=${OS_BIN} bs=512 seek=0 count=1   conv=notrunc,sync
+	dd if=${KERNEL_FINAL_BIN} of=${OS_BIN} bs=512 seek=1 count=100 conv=notrunc,sync
 
 # Build Kernel
 # ############
@@ -88,4 +88,4 @@ debug: all
 clean:
 	rm -rf ${BIN_DIR}
 	rm -rf ${BUILD_DIR}
-	
+
