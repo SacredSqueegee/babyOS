@@ -236,9 +236,9 @@ ata_lba_read:
     out dx, al
 
     ; Clear Features Register
-    ;xor al, al
-    ;mov dx, 0x1F1
-    ;out dx, al
+    xor al, al
+    mov dx, 0x1F1
+    out dx, al
 
     ; Send Number of Secotrs to read
     mov eax, ecx
