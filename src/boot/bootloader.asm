@@ -203,9 +203,9 @@ load_kernel:
     mov edi, 0x0100000      ; Load data to address 0x0100000 = 1MiB
     call ata_lba_read
 
-
-
-    jmp $
+    ; Done reading kernel to memory! :)
+    ; Start kernel execution
+    jmp CODE_SEG:0x0100000
 
 
 
@@ -220,11 +220,83 @@ load_kernel:
 ; ***   Control ports:  0x3F6 - 0x3F7
 ; ***   Maybe enumerate PCI to verify this???
 ;
-;   eax -> Read start sector
-;   ecx -> Number of sectors to read
+;   eax -> LBA - Read start sector
+;   ecx -> Number of sectors to read [max 255] -> sending 0 reads 256 sectors
 ;   edi -> Address in memory to write sectors to
 ata_lba_read:
-    jmp $
+    ; Save LBA
+    mov ebx, eax
+
+    ; Select MASTER drive and send highest 4-bits of LBA to the drive/head register
+    ; Top 4 bits are configurstions; Bottom 4 bits are the highest 4-bits of LBA
+    ; set port 0x1F6 = (LBA >> 24) | 0xE0
+    shr eax, 24
+    or  eax, 0xE0    ; 0xE? -> selects master drive for LBA addressing, ? -> high 4-bits of LBA
+    mov dx, 0x1F6
+    out dx, al
+
+    ; Clear Features Register
+    ;xor al, al
+    ;mov dx, 0x1F1
+    ;out dx, al
+
+    ; Send Number of Secotrs to read
+    mov eax, ecx
+    mov dx, 0x1F2
+    out dx, al
+
+    ; Restore LBA
+    mov eax, ebx
+
+    ; Send low 8-bits of LBA
+    mov dx, 0x1F3   ; LBAlo
+    out dx, al
+
+    ; Send next 8-bits of LBA
+    shr eax, 8
+    mov dx, 0x1F4   ; LBAmid
+    out dx, al
+
+    ; Send next 8-bits of LBA
+    shr eax, 8
+    mov dx, 0x1F5   ; LBAhi
+    out dx, al
+
+    ; Send Read Sectors Command
+    mov al, 0x20
+    mov dx, 0x1F7
+    out dx, al
+
+    .read_another_sector:
+        ; Save remaining sector count
+        push ecx
+
+        ; Check if data is ready to read
+        .poll:
+            mov dx, 0x1F7
+            in al, dx           ; read status into al
+            test al, 0b00001000 ; Test if DRQ bit is set
+            jz .poll            ; Keep looping till DRQ is set(ready to read data)
+
+        ; Read in sector of data
+        mov ecx, 256
+        mov dx, 0x1F0
+        rep insw        ; Read ECX bytes from port DX into memory address ES:EDI
+                        ; this reads 256 16-bit values(1 sector) from port 0x1F0 into the address as ES:EDI
+
+        ; delay ~400ns because spec sheet says to
+        mov dx, 0x1F7
+        mov ecx, 15
+        .delay:
+            in al, dx   ; Read status register
+            loop .delay
+
+        ; re-load remaining sector count and keep reading if there are more sectors to read
+        pop ecx
+        loop .read_another_sector
+
+    ; done reading secotrs to memory!
+    ret
 
 
 ; ---------------------------------------------------------------------------------------------------

@@ -1,7 +1,9 @@
 # Binary files
 *.bin
 
+data/
 bx_enh_dbg.ini
+*.bak
 
 
 # Prerequisites
