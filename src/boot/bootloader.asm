@@ -1,7 +1,11 @@
+; WARN: ATA commands in this bootloader really aren't compliant and do not adhear
+;       to recomended best practices.
 
 ; $     -> Current line addr
 ; $$    -> Beginning of current section addr (think .text, .data, etc...)
 
+; INFO: NASM is not a fan when we use far jumps to set the CS register, suppress this
+;       warning as warnings are set as errors
 [warning -reloc-abs]
 USE16           ; 16-bit assembly
 ORG 0x7c00      ; Compute labels and offsets from this load address
@@ -22,7 +26,7 @@ times 33 db 0x00    ; fill BPB with junk
 end_bpb:
 
 ; ---------------------------------------------------------------------------------------------------
-; Code Section
+; Code Section - Real Mode
 ; ---------------------------------------------------------------------------------------------------
 
 ; Ensure our CS register is properly updated to 0x00 by making a far jump(only far jmp's change CS reg)
@@ -48,9 +52,6 @@ entry:
     mov al, 3
     int 0x10
     
-    ; WARN: Skip ATA identify code as work around for below bug
-    ;jmp enable_pMode
-
     ; BUG: Something in the below code breaks qemu
     ;       When reading the ATA drive later on we get an error if we used this code to check for a drive
     ;       Bochs works just fine for some reason...
@@ -109,13 +110,6 @@ entry:
     and cl, 0b00000001
     cmp cl, 1
     je .bad_errbit      ; ERR bit set, not good
-
-    ;; Check DRQ bit
-    ;and al, 0b00001000
-    ;shr al, 3
-    ;cmp al, 1
-    ;jne .loop_2         ; Something is wrong, try polling again and redo
-    ;; DRQ set, ready to read IDENTIFY info, but we don't care, ATA good to go!
 
     ; INFO: When using QEMU you have to read the sector of data from the identify command otherwise
     ;       the ATA read of the kernel data breaks later on. It will read the first sector just fine, but
