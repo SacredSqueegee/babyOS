@@ -48,7 +48,8 @@ entry:
     mov al, 3
     int 0x10
     
-    jmp enable_pMode
+    ; WARN: Skip ATA identify code as work around for below bug
+    ;jmp enable_pMode
 
     ; BUG: Something in the below code breaks qemu
     ;       When reading the ATA drive later on we get an error if we used this code to check for a drive
@@ -109,13 +110,37 @@ entry:
     cmp cl, 1
     je .bad_errbit      ; ERR bit set, not good
 
-    ; Check DRQ bit
-    and al, 0b00001000
-    shr al, 3
-    cmp al, 1
-    jne .loop_2         ; Something is wrong, try polling again and redo
-    ; DRQ set, ready to read IDENTIFY info, but we don't care, ATA good to go!
-    
+    ;; Check DRQ bit
+    ;and al, 0b00001000
+    ;shr al, 3
+    ;cmp al, 1
+    ;jne .loop_2         ; Something is wrong, try polling again and redo
+    ;; DRQ set, ready to read IDENTIFY info, but we don't care, ATA good to go!
+
+    ; INFO: When using QEMU you have to read the sector of data from the identify command otherwise
+    ;       the ATA read of the kernel data breaks later on. It will read the first sector just fine, but
+    ;       any subsequent secotr read just breaks for some reason...
+    ;       
+    ;       Bochs does not care about this...
+
+    ; Read IDENTIFY info - 256 16-bit data values
+    .read_ident_info:
+        ; Check if data is ready to read (See if DRQ bit is set)
+        .poll:
+            ; TODO: add time out error check
+            mov dx, 0x1F7
+            in al, dx           ; read status into al
+            test al, 0b00001000 ; Test if DRQ bit is set
+            jz .poll            ; Keep looping till DRQ is set(ready to read data)
+
+        ; Read in sector of data
+        mov cx, 256
+        mov dx, 0x1F0
+        mov di, 0x7e00  ; Read IDENTIFY sector into 0x7e00 (es:di)
+        rep insw        ; Read ECX bytes from port DX into memory address ES:EDI
+                        ; this reads 256 16-bit values(1 sector) from port 0x1F0 into the address as ES:EDI
+
+
     ; print ata status message
     .good:
         mov ax, word msg_g
