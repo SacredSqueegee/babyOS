@@ -52,10 +52,12 @@ entry:
     mov al, 3
     int 0x10
     
-    ; BUG: Something in the below code breaks qemu
+    ; WARN: Something in the below code breaks qemu
     ;       When reading the ATA drive later on we get an error if we used this code to check for a drive
     ;       Bochs works just fine for some reason...
     ;       Maybe we need to reset the drive or check something for qemu???
+    ; INFO: This is fixed now, had to read in the IDENTIFY sector data and QEMU works now
+    ;       See info note below for more information.
 
     ; Identify ATA drive
     ; ------------------
@@ -65,11 +67,11 @@ entry:
     mov dx, 0x1F6
     out dx, al              ; Write 0xA0(Master Drive) to 0x1F6(Primary bus - drive/head register)
 
-    ; zero out sector, LBAlo, LBAmid, LBAhi registers
+    ; zero out sector, LBAlo, LBAmid, LBAhi registers (0x1F2 - 0x1F5)
     mov dx, 0x1F5
+    xor al, al
     .loop:
-        xor al, al
-        out dx, al              ; Write 0x00 to dx (sector, LBAlo, LBAmid, LBAhi)
+        out dx, al          ; Write 0x00 to dx (sector, LBAlo, LBAmid, LBAhi)
 
         dec dx
         cmp dx, 0x1F1
@@ -225,7 +227,7 @@ load_kernel:
 
     ; Load our kernel into memory
     mov eax, 1              ; Start reading at sector 1 (the sector after our bootlaoder on the disk)
-    mov ecx, 100            ; Read 100 secotrs
+    mov ecx, 100            ; Read 100 sectors
     mov edi, 0x0100000      ; Load data to address 0x0100000 = 1MiB
     call ata_lba_read
 
@@ -235,8 +237,8 @@ load_kernel:
 
 
 
-; No more instructions past here...
-; ---------------------------------
+; pMode Helper Functions
+; ----------------------
 
 ; Reads data from ATA disk into memroy
 ; *** Only works with MASTER drive on primary ATA Bus
@@ -298,8 +300,8 @@ ata_lba_read:
         push ecx
 
         ; Check if data is ready to read
+        mov dx, 0x1F7
         .poll:
-            mov dx, 0x1F7
             in al, dx           ; read status into al
             test al, 0b00001000 ; Test if DRQ bit is set
             jz .poll            ; Keep looping till DRQ is set(ready to read data)
@@ -321,7 +323,7 @@ ata_lba_read:
         pop ecx
         loop .read_another_sector
 
-    ; done reading secotrs to memory!
+    ; done reading sectors to memory!
     ret
 
 
