@@ -1,3 +1,4 @@
+
 ; $     -> Current line addr
 ; $$    -> Beginning of current section addr (think .text, .data, etc...)
 
@@ -47,6 +48,12 @@ entry:
     mov al, 3
     int 0x10
     
+    jmp enable_pMode
+
+    ; BUG: Something in the below code breaks qemu
+    ;       When reading the ATA drive later on we get an error if we used this code to check for a drive
+    ;       Bochs works just fine for some reason...
+    ;       Maybe we need to reset the drive or check something for qemu???
 
     ; Identify ATA drive
     ; ------------------
@@ -390,4 +397,3 @@ msg_notata: db "[ERR] Drive is not ATA"
 ; Pad bootloader and define boot signature
 times 510 - ($-$$) db 0x00
 dw 0xAA55
-
