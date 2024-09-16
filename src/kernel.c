@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "idt.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -106,5 +107,6 @@ void kernel_main()
 
     terminal_putchar(40, 15, 'X', 0x0f);
 
+    idt_init();
 }
 
