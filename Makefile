@@ -14,21 +14,25 @@ OS_BIN = ${BIN_DIR}/os.bin
 BOOTLOADER = ${SRC_DIR}/boot/bootloader.asm
 BOOTLOADER_BIN = ${BIN_DIR}/bootloader.bin
 
-KERNEL = ${SRC_DIR}/kernel.asm
-KERNEL_OBJ = ${BUILD_DIR}/kernel.asm.o
+KERNEL_ASM = ${SRC_DIR}/kernel.asm
+KERNEL_ASM_OBJ = ${BUILD_DIR}/kernel.asm.o
+KERNEL_C = ${SRC_DIR}/kernel.c
+KERNEL_C_OBJ = ${BUILD_DIR}/kernel.c.o
 #KERNEL_BIN = ${BIN_DIR}/kernel.bin
 
 KERNEL_FINAL_OBJ = ${BUILD_DIR}/kernel_final.asm.o
 KERNEL_FINAL_BIN = ${BIN_DIR}/kernel_final.bin
 
 # All obj files needed to build the final full kernel
-KERNEL_OBJ_FILES = ${KERNEL_OBJ}
+KERNEL_OBJ_FILES = ${KERNEL_ASM_OBJ} ${KERNEL_C_OBJ} 
 
 
 # Flags
 ASM_FLAGS = -g -Werror -w+all
 LD_FLAGS = -g -relocatable
-GCC_FLAGS = -ffreestanding -O0 -nostdlib
+GCC_FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
+
+INCLUDES = -I./src
 
 
 
@@ -54,8 +58,11 @@ ${KERNEL_FINAL_BIN}: ${KERNEL_OBJ_FILES}
 	chmod -x ${KERNEL_FINAL_BIN}
 
 # This is the initial Kernel code in assembly
-${KERNEL_OBJ}: ${KERNEL}
-	nasm ${ASM_FLAGS} -f elf -o ${KERNEL_OBJ} ${KERNEL}
+${KERNEL_ASM_OBJ}: ${KERNEL_ASM}
+	nasm ${ASM_FLAGS} -f elf -o ${KERNEL_ASM_OBJ} ${KERNEL_ASM}
+
+${KERNEL_C_OBJ}: ${KERNEL_C}
+	${GCC} ${INCLUDES} ${GCC_FLAGS} -std=gnu99 -c ${KERNEL_C} -o ${KERNEL_C_OBJ}
 
 
 # Build Bootloader
@@ -78,10 +85,10 @@ run: all
 
 debug: all
 	sudo gdb-multiarch \
-		-ex 'target remote | qemu-system-x86_64 -hda ${OS_BIN} -S -gdb stdio' \
-		-ex 'set architecture i8086' \
 		-ex 'set disassembly-flavor intel' \
 		-ex 'set disassembly-next-line on' \
+		-ex 'add-symbol-file ${KERNEL_FINAL_OBJ} 0x100000' \
+		-ex 'target remote | qemu-system-x86_64 -hda ${OS_BIN} -S -gdb stdio' \
 		-ex 'break *0x7c00' \
 		-ex 'continue'
 
