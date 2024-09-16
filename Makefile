@@ -1,3 +1,7 @@
+# TODO: Clean up this file and remove old junk
+#
+
+
 GCC = i686-elf-gcc
 LD	= i686-elf-ld
 
@@ -24,7 +28,7 @@ KERNEL_FINAL_OBJ = ${BUILD_DIR}/kernel_final.asm.o
 KERNEL_FINAL_BIN = ${BIN_DIR}/kernel_final.bin
 
 # All obj files needed to build the final full kernel
-KERNEL_OBJ_FILES = ${KERNEL_ASM_OBJ} ${KERNEL_C_OBJ} 
+#KERNEL_OBJ_FILES = ${KERNEL_ASM_OBJ} ${KERNEL_C_OBJ} 
 
 
 # Flags
@@ -32,7 +36,26 @@ ASM_FLAGS = -g -Werror -w+all
 LD_FLAGS = -g -relocatable
 GCC_FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
-INCLUDES = -I./src
+INCLUDES = -I./src -I./src/idt -I./src/memory
+
+# Find all C source files in src directory
+KERNEL_C_SOURCES := $(shell find $(SRC_DIR) -name '*.c')
+KERNEL_ASM_SOURCES := $(filter-out ${BOOTLOADER}, $(shell find $(SRC_DIR) -name '*.asm'))
+
+# Generate corresponding object files in build directory
+KERNEL_C_OBJECTS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.c.o, $(KERNEL_C_SOURCES))
+KERNEL_ASM_OBJECTS := $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.asm.o, $(KERNEL_ASM_SOURCES))
+KERNEL_OBJ_FILES = ${KERNEL_C_OBJECTS} ${KERNEL_ASM_OBJECTS}
+
+
+
+${info ${KERNEL_C_SOURCES}}
+${info ${KERNEL_ASM_SOURCES}}
+${info ${KERNEL_C_OBJECTS}}
+${info ${KERNEL_ASM_OBJECTS}}
+${info ${KERNEL_OBJ_FILES}}
+
+
 
 
 
@@ -49,7 +72,8 @@ all: prereqs | ${BOOTLOADER_BIN} ${KERNEL_FINAL_BIN}
 # ############
 
 # Build our final kernel binary from all our kernel obj files
-${KERNEL_FINAL_BIN}: ${KERNEL_OBJ_FILES}
+${KERNEL_FINAL_BIN}: ${KERNEL_C_OBJECTS} ${KERNEL_ASM_OBJECTS}
+#${KERNEL_FINAL_BIN}: ${KERNEL_OBJ_FILES}
 	# Combine all kernel object files into one BIG object file
 	${LD} ${LD_FLAGS} -o ${KERNEL_FINAL_OBJ} ${KERNEL_OBJ_FILES}
 	# Using the linker script assemble our object files into 1 final binary
@@ -57,12 +81,29 @@ ${KERNEL_FINAL_BIN}: ${KERNEL_OBJ_FILES}
 	# Remove the executable bit from final binary as gcc sets it
 	chmod -x ${KERNEL_FINAL_BIN}
 
-# This is the initial Kernel code in assembly
-${KERNEL_ASM_OBJ}: ${KERNEL_ASM}
-	nasm ${ASM_FLAGS} -f elf -o ${KERNEL_ASM_OBJ} ${KERNEL_ASM}
 
-${KERNEL_C_OBJ}: ${KERNEL_C}
-	${GCC} ${INCLUDES} ${GCC_FLAGS} -std=gnu99 -c ${KERNEL_C} -o ${KERNEL_C_OBJ}
+# Compile .c files
+${BUILD_DIR}/%.c.o: ${SRC_DIR}/%.c
+	mkdir -p $(dir $@)
+	${GCC} ${INCLUDES} ${GCC_FLAGS} -std=gnu99 -c $< -o $@
+
+# Compile .asm files
+${BUILD_DIR}/%.asm.o: ${SRC_DIR}/%.asm
+	mkdir -p $(dir $@)
+	nasm ${ASM_FLAGS} -f elf -o $@ $<
+
+
+
+## This is the initial Kernel code in assembly
+#${KERNEL_ASM_OBJ}: ${KERNEL_ASM}
+#	nasm ${ASM_FLAGS} -f elf -o ${KERNEL_ASM_OBJ} ${KERNEL_ASM}
+#
+#${KERNEL_C_OBJ}: ${KERNEL_C}
+#	${GCC} ${INCLUDES} ${GCC_FLAGS} -std=gnu99 -c ${KERNEL_C} -o ${KERNEL_C_OBJ}
+
+
+
+
 
 
 # Build Bootloader
@@ -79,7 +120,7 @@ prereqs:
 # ##################################################################################
 # Helper Commands
 # ##################################################################################
-.PHONY: run clean debug
+.PHONY: run clean debug compiledb
 run: all
 	qemu-system-x86_64 -hda ${OS_BIN}
 
@@ -95,4 +136,9 @@ debug: all
 clean:
 	rm -rf ${BIN_DIR}
 	rm -rf ${BUILD_DIR}
+
+compiledb:
+	make clean
+	rm -f ./compile_commands.json
+	bear -- make -B
 

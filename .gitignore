@@ -1,8 +1,13 @@
 # Binary files
+.cache/
+bin/
+build/
 *.bin
 
+del/
 data/
 bx_enh_dbg.ini
+compile_commands.json
 *.bak
 
 
