@@ -36,7 +36,8 @@ ASM_FLAGS = -g -Werror -w+all
 LD_FLAGS = -g -relocatable
 GCC_FLAGS = -g -ffreestanding -falign-jumps -falign-functions -falign-labels -falign-loops -fstrength-reduce -fomit-frame-pointer -finline-functions -Wno-unused-function -fno-builtin -Werror -Wno-unused-label -Wno-cpp -Wno-unused-parameter -nostdlib -nostartfiles -nodefaultlibs -Wall -O0 -Iinc
 
-INCLUDES = -I./src -I./src/idt -I./src/memory
+INCLUDE_DIRS := $(shell find $(SRC_DIR) -type d)
+INCLUDES = $(patsubst %, -I%, $(INCLUDE_DIRS))
 
 # Find all C source files in src directory
 KERNEL_C_SOURCES := $(shell find $(SRC_DIR) -name '*.c')
@@ -128,10 +129,12 @@ debug: all
 	sudo gdb-multiarch \
 		-ex 'set disassembly-flavor intel' \
 		-ex 'set disassembly-next-line on' \
-		-ex 'add-symbol-file ${KERNEL_FINAL_OBJ} 0x100000' \
+		-ex 'set auto-load off' \
+		-ex 'add-symbol-file ${KERNEL_FINAL_BIN} 0x100000' \
 		-ex 'target remote | qemu-system-x86_64 -hda ${OS_BIN} -S -gdb stdio' \
 		-ex 'break *0x7c00' \
 		-ex 'continue'
+		#-ex 'add-symbol-file ${KERNEL_FINAL_OBJ} 0x100000' \
 
 clean:
 	rm -rf ${BIN_DIR}

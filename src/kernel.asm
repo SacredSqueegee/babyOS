@@ -1,8 +1,8 @@
+bits 32
+
 ; INFO: NASM is not a fan when we use far jumps to set the CS register, suppress this
 ;       warning as warnings are set as errors
 [warning -reloc-rel]
-
-bits 32
 
 CODE_SEG equ 0x08
 DATA_SEG equ 0x10
