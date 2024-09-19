@@ -1,3 +1,7 @@
+;section .text._start    ; The linker script will use this to make sure this is the first symbol in our final kernel binary
+                        ; otherwise when the kernel hands execution over to 0x100000 and this code isn't there, bad things
+                        ; will happen...
+section .text
 bits 32
 
 ; INFO: NASM is not a fan when we use far jumps to set the CS register, suppress this
@@ -10,9 +14,6 @@ DATA_SEG equ 0x10
 extern kernel_main      ; Entry into the C portion of our kernel
 
 
-section .text._start    ; The linker script will use this to make sure this is the first symbol in our final kernel binary
-                        ; otherwise when the kernel hands execution over to 0x100000 and this code isn't there, bad things
-                        ; will happen...
 global _start
 _start:
     ; Set up data sgement selectors before we access memory so we don't generate a panic

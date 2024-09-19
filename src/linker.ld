@@ -5,7 +5,7 @@ SECTIONS
     . = 1M;
     .text : ALIGN(4096)
     {
-        KEEP(*(.text._start))     /* Ensure that our kernel.asm _start symbol is the first thing in the object file. Otherwise shit will break when the bootloader tries to hand over control to addr 0x100000 if our kenrel.asm _start isn't there */
+        /*KEEP(*(.text._start))      Ensure that our kernel.asm _start symbol is the first thing in the object file. Otherwise shit will break when the bootloader tries to hand over control to addr 0x100000 if our kenrel.asm _start isn't there */
         *(.text)
     }
 
@@ -27,6 +27,7 @@ SECTIONS
 
     .asm : ALIGN(4096)
     {
-        *(.asm)
+        KEEP(*(.asm))
     }
+
 }

@@ -1,4 +1,3 @@
-bits 32
 section .asm
 
 global inb, inw, ind

@@ -1,7 +1,7 @@
 # TODO: Clean up this file and remove old junk
 #
 
-
+GDB = sudo gdb-multiarch
 GCC = i686-elf-gcc
 LD	= i686-elf-ld
 
@@ -46,11 +46,16 @@ KERNEL_ASM_SOURCES := $(filter-out ${BOOTLOADER}, $(shell find $(SRC_DIR) -name 
 # Generate corresponding object files in build directory
 KERNEL_C_OBJECTS := $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.c.o, $(KERNEL_C_SOURCES))
 KERNEL_ASM_OBJECTS := $(patsubst $(SRC_DIR)/%.asm, $(BUILD_DIR)/%.asm.o, $(KERNEL_ASM_SOURCES))
-KERNEL_OBJ_FILES = ${KERNEL_C_OBJECTS} ${KERNEL_ASM_OBJECTS}
+KERNEL_OBJ_FILES := ${KERNEL_C_OBJECTS} ${KERNEL_ASM_OBJECTS}
+
+
+KERNEL_OBJ_FILES := ${KERNEL_ASM_OBJ} $(filter-out ${KERNEL_ASM_OBJ}, ${KERNEL_OBJ_FILES})
 
 
 
-${info ${KERNEL_C_SOURCES}}
+
+
+
 ${info ${KERNEL_ASM_SOURCES}}
 ${info ${KERNEL_C_OBJECTS}}
 ${info ${KERNEL_ASM_OBJECTS}}
@@ -78,6 +83,7 @@ ${KERNEL_FINAL_BIN}: ${KERNEL_C_OBJECTS} ${KERNEL_ASM_OBJECTS}
 	# Combine all kernel object files into one BIG object file
 	${LD} ${LD_FLAGS} -o ${KERNEL_FINAL_OBJ} ${KERNEL_OBJ_FILES}
 	# Using the linker script assemble our object files into 1 final binary
+	#${GCC} ${GCC_FLAGS} -T ${LNK_SCRIPT} -o ${KERNEL_FINAL_BIN} ${KERNEL_FINAL_OBJ}
 	${GCC} ${GCC_FLAGS} -T ${LNK_SCRIPT} -o ${KERNEL_FINAL_BIN} ${KERNEL_FINAL_OBJ}
 	# Remove the executable bit from final binary as gcc sets it
 	chmod -x ${KERNEL_FINAL_BIN}
@@ -126,15 +132,14 @@ run: all
 	qemu-system-x86_64 -hda ${OS_BIN}
 
 debug: all
-	sudo gdb-multiarch \
+	${GDB} \
 		-ex 'set disassembly-flavor intel' \
 		-ex 'set disassembly-next-line on' \
 		-ex 'set auto-load off' \
-		-ex 'add-symbol-file ${KERNEL_FINAL_BIN} 0x100000' \
+		-ex 'add-symbol-file ${KERNEL_FINAL_OBJ} 0x100000' \
 		-ex 'target remote | qemu-system-x86_64 -hda ${OS_BIN} -S -gdb stdio' \
 		-ex 'break *0x7c00' \
 		-ex 'continue'
-		#-ex 'add-symbol-file ${KERNEL_FINAL_OBJ} 0x100000' \
 
 clean:
 	rm -rf ${BIN_DIR}

@@ -1,4 +1,3 @@
-bits 32
 section .asm
 
 ; idt_load(uint32* address)
